@@ -13,7 +13,69 @@ int pumpState = LOW;
 const int runTime = 16;
 
 unsigned long previousMillis = 0;
-const long interval = 3000; // 1000 = 1 second
+unsigned long prevMillis = 0;
+const long interval = 1000; // 1000 = 1 second
+const long pumpTime = 5000;
+
+void runWater()
+{
+  unsigned long curMillis = millis();
+
+  if (curMillis - prevMillis >= pumpTime) {
+    prevMillis = curMillis;
+    if (pumpState == LOW) 
+    {
+      pumpState = HIGH;
+      bot.sendMessage(CHAT_ID, "Pump in ON", "");
+      digitalWrite(pumpPin, pumpState);
+      Serial.println("Pump in ON");
+    }
+  } 
+  else 
+  {
+    pumpState = LOW;
+    bot.sendMessage(CHAT_ID, "Pump in OFF", "");
+    digitalWrite(pumpPin, pumpState);
+    Serial.println("Pump in OFF");
+  }
+}
+
+void handleNewMessages(int numNewMessages)
+{
+  Serial.println("handleNewMessages");
+  Serial.println(String(numNewMessages));
+
+  for (int i = 0; i < numNewMessages; i++)
+    {
+    String chat_id = bot.messages[i].chat_id;
+    String text = bot.messages[i].text;
+
+    Serial.println(text);
+
+    String from_name = bot.messages[i].from_name;
+    if (from_name == "")
+      from_name = "Guest";
+
+    if (text == "/send_test_action")
+    {
+      bot.sendChatAction(chat_id, "typing");
+      delay(4000);
+      bot.sendMessage(chat_id, "Did you see the action message?");
+    }
+    if (text == "/start")
+    {
+      String welcome = "Welcome to Universal Arduino Telegram Bot library, " + from_name + ".\n";
+      welcome += "This is Chat Action Bot example.\n\n";
+      welcome += "/send_test_action : to send test chat action message\n";
+      bot.sendMessage(chat_id, welcome);
+    }
+    if (text == "/add_water")
+    {
+      runWater();
+      bot.sendMessage(chat_id, "pump is on");
+    }
+  }
+}
 
 void setup() {
   Serial.begin(115200);
@@ -51,12 +113,13 @@ void loop() {
     // save the last time you blinked the LED
     previousMillis = currentMillis;
 
-    // if the pump is off turn it on and vice-versa:
-    if (pumpState == LOW) {
-      pumpState = HIGH;
-      bot.sendMessage(CHAT_ID, "Pump in ON", "");
-      digitalWrite(pumpPin, pumpState);
-      Serial.println("Pump in ON");
+    int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+
+    while (numNewMessages)
+    {
+      Serial.println("got response");
+      handleNewMessages(numNewMessages);
+      numNewMessages = bot.getUpdates(bot.last_message_received + 1);
     }
   }
 }
