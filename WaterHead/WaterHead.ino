@@ -9,7 +9,7 @@ WiFiClientSecure client;
 UniversalTelegramBot bot(BOTtoken, client);
 String chat_id;
 
-const int pumpPin = 16;
+const int pumpPin = 5;
 int pumpState = LOW;
 const int runTime = 16;
 
