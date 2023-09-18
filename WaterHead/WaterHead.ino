@@ -7,37 +7,23 @@
 X509List cert(TELEGRAM_CERTIFICATE_ROOT);
 WiFiClientSecure client;
 UniversalTelegramBot bot(BOTtoken, client);
+String chat_id;
 
 const int pumpPin = 16;
 int pumpState = LOW;
 const int runTime = 16;
 
 unsigned long previousMillis = 0;
-unsigned long prevMillis = 0;
+unsigned long pumpPreviousMillis = 0;
 const long interval = 1000; // 1000 = 1 second
 const long pumpTime = 5000;
+unsigned long currentMillis;
 
 void runWater()
 {
-  unsigned long curMillis = millis();
-
-  if (curMillis - prevMillis >= pumpTime) {
-    prevMillis = curMillis;
-    if (pumpState == LOW) 
-    {
-      pumpState = HIGH;
-      bot.sendMessage(CHAT_ID, "Pump in ON", "");
-      digitalWrite(pumpPin, pumpState);
-      Serial.println("Pump in ON");
-    }
-  } 
-  else 
-  {
-    pumpState = LOW;
-    bot.sendMessage(CHAT_ID, "Pump in OFF", "");
-    digitalWrite(pumpPin, pumpState);
-    Serial.println("Pump in OFF");
-  }
+  pumpPreviousMillis = currentMillis;
+  pumpState = HIGH;
+  digitalWrite(pumpPin, pumpState);
 }
 
 void handleNewMessages(int numNewMessages)
@@ -47,7 +33,7 @@ void handleNewMessages(int numNewMessages)
 
   for (int i = 0; i < numNewMessages; i++)
     {
-    String chat_id = bot.messages[i].chat_id;
+    chat_id = bot.messages[i].chat_id;
     String text = bot.messages[i].text;
 
     Serial.println(text);
@@ -71,8 +57,8 @@ void handleNewMessages(int numNewMessages)
     }
     if (text == "/add_water")
     {
-      runWater();
       bot.sendMessage(chat_id, "pump is on");
+      runWater();
     }
   }
 }
@@ -107,8 +93,8 @@ void setup() {
 }
 
 void loop() {
-  unsigned long currentMillis = millis();
 
+  currentMillis = millis();
   if (currentMillis - previousMillis >= interval) {
     // save the last time you blinked the LED
     previousMillis = currentMillis;
@@ -121,5 +107,11 @@ void loop() {
       handleNewMessages(numNewMessages);
       numNewMessages = bot.getUpdates(bot.last_message_received + 1);
     }
+  }
+
+  if (pumpState == HIGH && currentMillis - pumpPreviousMillis >= pumpTime) {
+    pumpState = LOW;
+    digitalWrite(pumpPin, pumpState);
+    bot.sendMessage(chat_id, "pump is off");
   }
 }
